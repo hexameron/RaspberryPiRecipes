@@ -2,6 +2,12 @@
 import urllib
 import simplejson
 import time
+import RPi.GPIO as GPIO
+
+# Set-up the General Purpose Input-Ouput (GPIO) pins
+GPIO.cleanup() # Start from scratch
+GPIO.setmode(GPIO.BCM) # Set GPIO mode for the Pi
+GPIO.setup(4, GPIO.OUT) # Set Pin 4 on the GPIO header to be an output
 
 # Create a function that takes a Twitter handle (e.g. @Raspberry_Pi) as an argument and returns the most recent tweet containing that handle 
 def Latest_Tweet_to_Twitter_Handle(twitter_handle): # Define the function and show the arguments
