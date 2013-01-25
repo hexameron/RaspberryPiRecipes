@@ -10,4 +10,4 @@ GPIO.setup(25, GPIO.IN)
 while True:
         if GPIO.input(4):
                 os.system('mpg321 1748.mp3 &')
-        sleep(1);
+        time.sleep(1);
