@@ -1,15 +1,33 @@
-# Import the Python libraries that we need for this program
+# First we need to import the libraries that we need
+
+# Import the time library so that we can make the program pause for a fixed amounr of time
 import time
-import os
+
+# Import the Raspberry Pi GPIO libraries that allow us to connect the Raspberry Pi to other physical devices via the General Purpose Input-Output (GPIO) pins
 import RPi.GPIO as GPIO
 
-# Set-up the General Purpose Input-Ouput (GPIO) pins
-GPIO.cleanup() # Start from scratch
-GPIO.setmode(GPIO.BCM) # Set GPIO mode for the Pi
-GPIO.setup(2, GPIO.IN) # Set Pin 2 on the GPIO header to be an input
+# Import the os library so that we can make our program call other programs that run on the Raspberry Pi
+import os
+
+# Now we need to set-up the General Purpose Input-Ouput (GPIO) pins
+
+# Clear the current set-up so that we can start from scratch
+GPIO.cleanup() 
+
+# Set GPIO mode to work with the Pi
+GPIO.setmode(GPIO.BCM) 
+
+# Set Pin 2 on the GPIO header to be an input
+GPIO.setup(2, GPIO.IN) 
 
 # This loop runs forever and plays the mp3 file when the two wires are touching
-while True: # Loop forever
-        if GPIO.input(2) == False: # Check to see if GPIO pin 2 is connected to the ground pin
-                os.system('mpg321 1748.mp3 &') # If it is then play the mp3 file
-        time.sleep(1); # Wait for a second before repeating the loop
+while True: 
+        
+        # Check to see if GPIO pin 2 is connected to the ground pin
+        if GPIO.input(2) == False: 
+                
+                # If it is then play the mp3 file
+                os.system('mpg321 1748.mp3 &') 
+        
+        # Wait for a second before repeating the loop
+        time.sleep(1); 
