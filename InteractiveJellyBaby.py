@@ -9,5 +9,5 @@ RPi.GPIO.setup(25, GPIO.IN)
 
 while True:
         if RPi.GPIO.input(4):
-                os.system('mpg321 ow.mp3 &')
+                os.system('mpg321 1748.mp3 &')
         sleep(1);
