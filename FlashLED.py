@@ -15,7 +15,7 @@ GPIO.cleanup()
 GPIO.setmode(GPIO.BOARD)
 
 # Set Pin 7 on the GPIO header to act as an output
-GPIO.setup(7, GPIO.OUT)
+GPIO.setup(7,GPIO.OUT)
 
 # This loop runs forever and flashes the LED
 while True:
