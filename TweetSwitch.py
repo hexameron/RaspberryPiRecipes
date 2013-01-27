@@ -61,7 +61,7 @@ while(True):
   print Tweet," - Switch OFF","\n" 
   
   # Then switch off the given GPIO pin
-  GPIO.output(4,GPIO.LOW) 
+  GPIO.output(7,GPIO.LOW) 
  
  # Wait for 2 seconds before repeating
  time.sleep(2) 
