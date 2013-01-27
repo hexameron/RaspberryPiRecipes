@@ -27,7 +27,7 @@ while True:
         if GPIO.input(3) == False: 
                 
                 # If it's connected to ground then play the mp3 file
-                os.system('mpg321 1748.mp3 &') 
+                os.system('mpg321 la.mp3 &') 
         
         # Wait for a second before repeating the loop
         time.sleep(1); 
