@@ -11,23 +11,23 @@ import RPi.GPIO as GPIO
 # Clear the current set-up so that we can start from scratch
 GPIO.cleanup()
 
-# Set GPIO mode to work with the Pi
-GPIO.setmode(GPIO.BCM)
+# Set up the GPIO library to use Raspberry Pi board pin numbers
+GPIO.setmode(GPIO.BOARD)
 
-# Set Pin 2 on the GPIO header to be an input
-GPIO.setup(4, GPIO.OUT)
+# Set Pin 7 on the GPIO header to act as an output
+GPIO.setup(7, GPIO.OUT)
 
 # This loop runs forever and flashes the LED
 while True:
        
   # Turn on the LED
-GPIO.output(4,GPIO.HIGH)
+GPIO.output(7,GPIO.HIGH)
 
        # Wait for a second
        time.sleep(1)
 
 # Turn off the LED
-GPIO.output(4,GPIO.LOW)
+GPIO.output(7,GPIO.LOW)
 
        # Wait for a second
        time.sleep(1)
