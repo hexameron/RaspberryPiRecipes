@@ -14,17 +14,17 @@ import os
 # Clear the current set-up so that we can start from scratch
 GPIO.cleanup() 
 
-# Set GPIO mode to work with the Pi
-GPIO.setmode(GPIO.BCM) 
+# Set up the GPIO library to use Raspberry Pi board pin numbers
+GPIO.setmode(GPIO.BOARD)
 
 # Set Pin 2 on the GPIO header to be an input
-GPIO.setup(2, GPIO.IN) 
+GPIO.setup(3, GPIO.IN) 
 
 # This loop runs forever and plays the mp3 file when the two wires are touching
 while True: 
         
         # Check to see if GPIO pin 2 is connected to the ground pin
-        if GPIO.input(2) == False: 
+        if GPIO.input(3) == False: 
                 
                 # If it is then play the mp3 file
                 os.system('mpg321 1748.mp3 &') 
