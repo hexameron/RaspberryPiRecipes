@@ -17,11 +17,11 @@ import RPi.GPIO as GPIO
 # Clear the current set-up so that we can start from scratch
 GPIO.cleanup() 
 
-# Set GPIO mode to work with the Pi
-GPIO.setmode(GPIO.BCM) 
+# Set up the GPIO library to use Raspberry Pi board pin numbers
+GPIO.setmode(GPIO.BOARD)
 
-# Set Pin 4 on the GPIO header to be an output
-GPIO.setup(4, GPIO.OUT) 
+# Set pin 7 on the GPIO header to be an output
+GPIO.setup(7, GPIO.OUT)
 
 # Next we need to create a function that takes a Twitter handle (e.g. @Raspberry_Pi) as an argument and returns the most recent tweet containing that handle 
 
@@ -52,7 +52,7 @@ while(True):
   print Tweet," - Switch ON","\n" 
   
   # Then switch on the given GPIO pin
-  RPi.GPIO.output(4,1) 
+  GPIO.output(7,GPIO.HIGH) 
  
  # Check if tweet contains the word given in quotation marks
  if "OFF" in Tweet 
@@ -61,7 +61,7 @@ while(True):
   print Tweet," - Switch OFF","\n" 
   
   # Then switch off the given GPIO pin
-  RPi.GPIO.output(4,0) 
+  GPIO.output(4,GPIO.LOW) 
  
  # Wait for 2 seconds before repeating
  time.sleep(2) 
