@@ -18,7 +18,7 @@ GPIO.cleanup()
 GPIO.setmode(GPIO.BOARD)
 
 # Set pin 3 on the GPIO header to be an input
-GPIO.setup(3, GPIO.IN) 
+GPIO.setup(3,GPIO.IN) 
 
 # This loop runs forever and plays the mp3 file when the two wires are touching
 while True: 
