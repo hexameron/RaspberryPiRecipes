@@ -1,4 +1,4 @@
 RaspberryPiRecipes
 ==================
-
-Files and scripts needed for OCR's Raspberry Pi Recipes from BETT 2013 
+hello_audio, for stdin playback
+ 
