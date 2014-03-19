@@ -34,8 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <semaphore.h>
 
-#include "bcm_host.h"
+#define  USE_VCHIQ_ARM forfucksake
+#include "/opt/vc/include/bcm_host.h"
 #include "ilclient.h"
+#include "ilclient.c"
+#include "ilcore.c"
 
 #define OUT_CHANNELS(num_channels) ((num_channels) > 4 ? 8: (num_channels) > 2 ? 4: (num_channels))
 
