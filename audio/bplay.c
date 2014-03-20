@@ -34,21 +34,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <semaphore.h>
 
-#define  USE_VCHIQ_ARM forfucksake
-#include "/opt/vc/include/bcm_host.h"
+#include "bcm_host.h"
 #include "ilclient.h"
 #include "ilclient.c"
 #include "ilcore.c"
 
 #define OUT_CHANNELS(num_channels) ((num_channels) > 4 ? 8: (num_channels) > 2 ? 4: (num_channels))
-
-#ifndef countof
-   #define countof(arr) (sizeof(arr) / sizeof(arr[0]))
-#endif
-
-#define BUFFER_SIZE_SAMPLES 1024
-
-typedef int int32_t;
 
 typedef struct {
    sem_t sema;
@@ -60,29 +51,45 @@ typedef struct {
    uint32_t bytes_per_sample;
 } AUDIOPLAY_STATE_T;
 
+uint8_t *audioplay_get_buffer(AUDIOPLAY_STATE_T *st);
+int32_t audioplay_play_buffer(AUDIOPLAY_STATE_T *st,
+                              uint8_t *buffer, uint32_t length);
+
+static AUDIOPLAY_STATE_T *state = NULL;
+static int buff_size=1024;
+static int circ_size=65536;
+static uint8_t *circular = NULL;
+static int outptr = 0;
+static int running = 0;
+
 static void input_buffer_callback(void *data, COMPONENT_T *comp)
 {
-   // do nothing - could add a callback to the user
-   // to indicate more buffers may be available.
+   uint8_t *buf, *source;
+   if(!running) return;
+   buf = audioplay_get_buffer(state);
+   while(buf) {
+      source = circular + buff_size*(63 & outptr++);
+      memcpy(buf, source, buff_size);
+      audioplay_play_buffer(state, buf, buff_size);
+      buf = audioplay_get_buffer(state);
+   }
 }
 
 int32_t audioplay_create(AUDIOPLAY_STATE_T **handle,
                          uint32_t sample_rate,
                          uint32_t num_channels,
-                         uint32_t bit_depth,
                          uint32_t num_buffers,
                          uint32_t buffer_size)
 {
-   uint32_t bytes_per_sample = (bit_depth * OUT_CHANNELS(num_channels)) >> 3;
+   uint32_t bytes_per_sample = 2 * OUT_CHANNELS(num_channels);
    int32_t ret = -1;
 
    *handle = NULL;
 
    // basic sanity check on arguments
-   if(sample_rate >= 8000 && sample_rate <= 192000 &&
+   if(sample_rate >= 8000 && sample_rate <= 48000 &&
       (num_channels >= 1 && num_channels <= 8) &&
-      (bit_depth == 16 || bit_depth == 32) &&
-      num_buffers > 0 &&
+      num_buffers > 1 &&
       buffer_size >= bytes_per_sample)
    {
       // buffer lengths must be 16 byte aligned for VCHI
@@ -147,7 +154,7 @@ int32_t audioplay_create(AUDIOPLAY_STATE_T **handle,
          pcm.eEndian = OMX_EndianLittle;
          pcm.nSamplingRate = sample_rate;
          pcm.bInterleaved = OMX_TRUE;
-         pcm.nBitPerSample = bit_depth;
+         pcm.nBitPerSample = 16;
          pcm.ePCMMode = OMX_AUDIO_PCMModeLinear;
 
          switch(num_channels) {
@@ -336,63 +343,48 @@ uint32_t audioplay_get_latency(AUDIOPLAY_STATE_T *st)
 #define MIN_LATENCY_TIME 20
 
 static const char *audio_dest[] = {"local", "hdmi"};
-void play_api_test(int samplerate, int bitdepth, int nchannels, int dest)
+
+/* client manages large ringbuffer of 64 segments. Server buffers are one segment each,
+ *  16 byte aligned. Client manages overruns/underruns. */
+
+void play_stdin(int samplerate, int channels, int dest)
 {
-   AUDIOPLAY_STATE_T *st;
    int32_t ret;
-   unsigned int i, j, n;
-   int phase = 0;
-   int inc = 256<<16;
-   int dinc = 0;
-   int buffer_size = (BUFFER_SIZE_SAMPLES * bitdepth * OUT_CHANNELS(nchannels))>>3;
+   uint8_t *target;
+   int inptr = 32;
 
-   assert(dest == 0 || dest == 1);
+   FILE *inhandle = stdin;
 
-   ret = audioplay_create(&st, samplerate, nchannels, bitdepth, 10, buffer_size);
-   assert(ret == 0);
+   ret = audioplay_create(&state, samplerate, channels, 5, buff_size);
+   if (ret) return;
 
-   ret = audioplay_set_dest(st, audio_dest[dest]);
-   assert(ret == 0);
+   ret = audioplay_set_dest(state, audio_dest[dest & 1]);
+   if (ret) printf("Audio destination not set.\n");
 
-   // iterate for 5 seconds worth of packets
-   for (n=0; n<((samplerate * 1000)/ BUFFER_SIZE_SAMPLES); n++)
-   {
-      uint8_t *buf;
-      int16_t *p;
-      uint32_t latency;
+   // use callback to launch server
+   running = 1;
+   input_buffer_callback(NULL, NULL);
 
-      while((buf = audioplay_get_buffer(st)) == NULL)
-         usleep(10*1000);
+   printf("Playing stream.\n");
+   do {
+      target = circular + buff_size*(63 & inptr++);
+      ret = fread(target, 1, buff_size, inhandle);
+      usleep(20*1000);
+   } while (ret > 0);
 
-      p = (int16_t *) buf;
-
-      // fill the buffer
-      for (i=0; i<BUFFER_SIZE_SAMPLES; i++)
-      {
-      }
-
-      // try and wait for a minimum latency time (in ms) before
-      // sending the next packet
-      while((latency = audioplay_get_latency(st)) > (samplerate * (MIN_LATENCY_TIME + CTTW_SLEEP_TIME) / 1000))
-         usleep(CTTW_SLEEP_TIME*1000);
-
-      ret = audioplay_play_buffer(st, buf, buffer_size);
-      assert(ret == 0);
-   }
-
-   audioplay_delete(st);
+   running = 0;
+   usleep(200*1000);
+   audioplay_delete(state);
 }
 
 int main (int argc, char **argv)
 {
    // 0=headphones, 1=hdmi
-   int audio_dest = 0;
+   int audio_dest = 1;
    // audio sample rate in Hz
    int samplerate = 48000;
    // numnber of audio channels
-   int channels = 2;
-   // number of bits per sample
-   int bitdepth = 16;
+   int channels = 1;
    bcm_host_init();
 
    if (argc > 1)
@@ -402,9 +394,20 @@ int main (int argc, char **argv)
    if (argc > 3)
       samplerate = atoi(argv[3]);
 
-   printf("Outputting audio to %s\n", audio_dest==0 ? "analogue":"hdmi");
+   printf("Streaming %dHz to %s\n",samplerate,  audio_dest==0 ? "analogue.":"hdmi.");
 
-   play_api_test(samplerate, bitdepth, channels, audio_dest);
+   buff_size = samplerate >> (6+4);
+   buff_size <<= 4;
+   buff_size *= 2 * OUT_CHANNELS(channels);
+   circ_size = buff_size << 6;
+   printf("Buffer size 64x%d.\n",buff_size);
+
+   circular = calloc(64, buff_size);
+   if (!circular) return ENOMEM;
+
+   play_stdin(samplerate, channels, audio_dest);
+
+   free (circular);
    return 0;
 }
 
