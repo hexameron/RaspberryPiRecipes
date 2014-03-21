@@ -56,6 +56,7 @@ int32_t audioplay_play_buffer(AUDIOPLAY_STATE_T *st,
                               uint8_t *buffer, uint32_t length);
 
 static AUDIOPLAY_STATE_T *state = NULL;
+static pthread_t omxthread;
 static int buff_size=1024;
 static int circ_size=65536;
 static uint8_t *circular = NULL;
@@ -64,15 +65,22 @@ static int running = 0;
 
 static void input_buffer_callback(void *data, COMPONENT_T *comp)
 {
+// This is not the callback you are looking for.
+}
+
+static void *omx_play(void *args)
+{
    uint8_t *buf, *source;
-   if(!running) return;
-   buf = audioplay_get_buffer(state);
-   while(buf) {
-      source = circular + buff_size*(63 & outptr++);
-      memcpy(buf, source, buff_size);
-      audioplay_play_buffer(state, buf, buff_size);
+   while(running) {
       buf = audioplay_get_buffer(state);
+      if(buf) {
+         source = circular + buff_size*(63 & outptr++);
+         memcpy(buf, source, buff_size);
+         audioplay_play_buffer(state, buf, buff_size);
+      }
+      usleep(30*1000);
    }
+   return 0;
 }
 
 int32_t audioplay_create(AUDIOPLAY_STATE_T **handle,
@@ -351,7 +359,7 @@ void play_stdin(int samplerate, int channels, int dest)
 {
    int32_t ret;
    uint8_t *target;
-   int inptr = 32;
+   int inptr = 16;
 
    FILE *inhandle = stdin;
 
@@ -361,18 +369,19 @@ void play_stdin(int samplerate, int channels, int dest)
    ret = audioplay_set_dest(state, audio_dest[dest & 1]);
    if (ret) printf("Audio destination not set.\n");
 
-   // use callback to launch server
+   // launch server
    running = 1;
-   input_buffer_callback(NULL, NULL);
+   pthread_create(&omxthread, NULL, omx_play, (void *)NULL);
 
-   printf("Playing stream.\n");
+   // run client
    do {
       target = circular + buff_size*(63 & inptr++);
-      ret = fread(target, 1, buff_size, inhandle);
-      usleep(20*1000);
+      ret = fread(target, 2, buff_size>>1, inhandle);
+      usleep(16*1000);
    } while (ret > 0);
 
    running = 0;
+   pthread_join(omxthread, NULL);
    usleep(200*1000);
    audioplay_delete(state);
 }
