@@ -73,10 +73,11 @@ static void *omx_play(void *args)
    uint8_t *buf, *source;
    while(running) {
       buf = audioplay_get_buffer(state);
-      if(buf) {
+      while(buf) {
          source = circular + buff_size*(63 & outptr++);
          memcpy(buf, source, buff_size);
          audioplay_play_buffer(state, buf, buff_size);
+         buf = audioplay_get_buffer(state);
       }
       usleep(30*1000);
    }
@@ -330,26 +331,6 @@ int32_t audioplay_set_dest(AUDIOPLAY_STATE_T *st, const char *name)
    return success;
 }
 
-
-uint32_t audioplay_get_latency(AUDIOPLAY_STATE_T *st)
-{
-   OMX_PARAM_U32TYPE param;
-   OMX_ERRORTYPE error;
-
-   memset(&param, 0, sizeof(OMX_PARAM_U32TYPE));
-   param.nSize = sizeof(OMX_PARAM_U32TYPE);
-   param.nVersion.nVersion = OMX_VERSION;
-   param.nPortIndex = 100;
-
-   error = OMX_GetConfig(ILC_GET_HANDLE(st->audio_render), OMX_IndexConfigAudioRenderingLatency, &param);
-   assert(error == OMX_ErrorNone);
-
-   return param.nU32;
-}
-
-#define CTTW_SLEEP_TIME 10
-#define MIN_LATENCY_TIME 20
-
 static const char *audio_dest[] = {"local", "hdmi"};
 
 /* client manages large ringbuffer of 64 segments. Server buffers are one segment each,
@@ -357,9 +338,9 @@ static const char *audio_dest[] = {"local", "hdmi"};
 
 void play_stdin(int samplerate, int channels, int dest)
 {
-   int32_t ret;
+   int32_t diff, ret;
    uint8_t *target;
-   int inptr = 16;
+   int inptr;
 
    FILE *inhandle = stdin;
 
@@ -369,15 +350,23 @@ void play_stdin(int samplerate, int channels, int dest)
    ret = audioplay_set_dest(state, audio_dest[dest & 1]);
    if (ret) printf("Audio destination not set.\n");
 
+   // Preload buffer
+   ret = fread(circular, 2, buff_size*4, inhandle);
+   inptr = 2;
+
    // launch server
    running = 1;
    pthread_create(&omxthread, NULL, omx_play, (void *)NULL);
 
    // run client
    do {
-      target = circular + buff_size*(63 & inptr++);
-      ret = fread(target, 2, buff_size>>1, inhandle);
-      usleep(16*1000);
+      target = circular + 4*buff_size*(15 & inptr++);
+      ret = fread(target, 2, buff_size*2, inhandle);
+      diff = 4*(inptr & 15) - (outptr & 63);
+      if (diff < 0) diff += 64;
+                     usleep(30*1000); // underrun
+      if (diff > 30) usleep(30*1000); // normal
+      if (diff > 50) usleep(30*1000); // overrun
    } while (ret > 0);
 
    running = 0;
