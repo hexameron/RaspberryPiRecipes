@@ -1,0 +1,46 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# * UDP modifications: Original Code by Olgierd Pilarczyk
+# * Extended by Frederik Granna <rtlsdr@granna.de>
+#
+import socket, sys
+
+if len(sys.argv) < 2:
+	print("usage: rtlcmd [gain x|gain auto|freq x|boost x|exit]")
+	sys.exit(3)
+
+buf = ""
+
+mode = sys.argv[1]
+data = 500
+if len(sys.argv) > 2:
+	data = sys.argv[2]
+
+if mode == 'freq':
+	buf = buf + chr(0)
+elif mode == 'exit':
+	buf = buf + chr(1)
+	data = -1
+elif mode == 'boost':
+  buf = buf + chr(2)
+elif mode == 'gain':
+  buf = buf + chr(3)
+  if data == 'auto':
+    data = -100
+else:
+	print("usage: rtlcmd [gain x|gain auto|freq x|exit]")
+	sys.exit(1)
+
+data = int(data)
+
+i=0
+while i < 4:
+	buf = buf + chr(data & 0xff)
+	data = data >> 8
+	i = i + 1
+
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("localhost", 6020))
+s.send(buf)
+s.close()

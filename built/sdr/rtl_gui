@@ -1,0 +1,97 @@
+#!/usr/bin/python
+#(c) Public Domain
+
+freq = 98100000
+step = 1000
+boost = 0
+
+import socket, sys, time
+import Tkinter
+
+print("usage: rtlgui [base freq]")
+if len(sys.argv) > 1:
+        freq = int(sys.argv[1])
+
+def sendmessage(buf):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("localhost", 6020))
+        s.send(buf)
+        s.close()
+
+def changefreq(newfreq):
+	ofreq = newfreq
+	obuf = "" + chr(0)
+        i = 0
+        while i < 4:
+                i = i + 1
+                obuf = obuf + chr(ofreq & 0xff)
+                ofreq = ofreq >> 8
+        sendmessage(obuf)
+
+def killrtl():
+	obuf = "" + chr(1)
+	sendmessage(obuf)
+
+def newboost(level):
+	obuf = "" + chr(2) + chr(3*int(level))
+	obuf = obuf + 3 * chr(0)
+	sendmessage(obuf)
+
+changefreq(freq)
+
+root = Tkinter.Tk()
+root.freq = freq
+root.step = step
+root.boost = boost
+myContainer = Tkinter.Frame(root)
+myContainer.pack()
+
+def button1Click():
+	print("Exit request")
+	killrtl()
+	sys.exit(0)
+def button2Click():
+        root.freq = root.freq - root.step
+        changefreq(root.freq)
+	button4["text"]= root.freq
+def button3Click():
+	root.freq = root.freq + root.step
+	changefreq(root.freq)
+	button4["text"]= root.freq
+def button4Click():
+	colour = "" + root.boost * "white"
+	root.boost = 1 - root.boost
+	button4["background"]= colour + root.boost * "red"
+	newboost(root.boost)
+def button5Click():
+	root.step = root.step * 5
+	if root.step > 1000000:
+		root.step = 1000
+	button5["text"]= root.step
+
+button1 = Tkinter.Button(myContainer, command=button1Click)
+button2 = Tkinter.Button(myContainer, command=button2Click)
+button3 = Tkinter.Button(myContainer, command=button3Click)
+button4 = Tkinter.Button(myContainer, command=button4Click)
+button5 = Tkinter.Button(myContainer, command=button5Click)
+button1["text"]= "x KILL x"
+button2["text"]= "<DOWN<"
+button3["text"]= ">  UP  >"
+button4["text"]= root.freq
+button5["text"]= root.step
+button1["background"] = "red"
+button2["background"] = "blue"
+button3["background"] = "green"
+button4["background"] = "white"
+button1.pack()
+button4.pack()
+button2.pack()
+button5.pack()
+button3.pack()
+
+
+root.mainloop()
+
+exit(1)
+
+
