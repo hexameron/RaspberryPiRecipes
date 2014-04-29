@@ -1,10 +1,14 @@
+/*
+Public domain reference (c) 2014 John Greb
+*/
+
 #include "stdio.h"
 #include "stdint.h"
 #include "hamrtty.h"
 
 int main(int argc, char *argv[])
 {
-	unsigned char lastchar, outchar[4], c[4];
+	unsigned char lastchar, temp, c[4];
 	unsigned char unhamming_lut[0x80];
         FILE *fin = stdin;
         FILE *fout = stdout;
@@ -16,25 +20,24 @@ int main(int argc, char *argv[])
 
 	lastchar = 0xff;
 	while ( fread(c, 1, 1, fin) > 0 ) {
-		c[1] = unhamming_lut[c[0] & 0x7f]; 
-		if ( c[1]>=8 ){
-			// 8 low digits are sent as nibbles, with high bit set
-			outchar[0] = 48 + c[1] - 8;
-			fwrite(outchar, 1, 1, fout);
-			lastchar = 0xff;
+		temp = unhamming_lut[c[0] & 0x7f];
+		if ( temp >= 4 && lastchar == 0xff ){
+			// ".,01234567890" are sent as nibbles
+			if (temp == 5) // ASCII 47 swapped with ASCII 44
+				temp = 2;
+			c[0] = 46 + temp - 4;
+			fwrite(c, 1, 1, fout);
+		} else if (lastchar == 0xff) {
+			lastchar = temp;
 		} else {
-			if (lastchar == 0xff) {
-				lastchar = c[1] & 0x7;
-				continue;
-			}
-			// 8 x 8 other chars are sent as two nibbles
-			c[2] = lastchar + 8 * (0x7 & c[1]);
+			// 4 x 16 other chars are sent as two nibbles
+			temp = lastchar + 4 * temp;
 			lastchar = 0xff;
-			c[2] += 32;
-			if (c[2]==48) c[2] = 10;
-			if (c[2]==48+3) c[2] = 13;
-			outchar[0] = c[2];
-			fwrite(outchar, 1, 1, fout);
+			temp += 32;
+			if (temp == 44) temp = 10;
+			if (temp == 46) temp = 13;
+			c[0] = temp;
+			fwrite(c, 1, 1, fout);
 		}
 	}
 

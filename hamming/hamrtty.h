@@ -10,12 +10,12 @@ Hamming enhanced rtty: Single Error Correction
 2) Start bits can be inferred by timing if parity is good: needs improved decoder.
 3) 4 bit data allows DominoEx-like charset, maintaining datarate.
 
-Eight primary characters: "01234567"; (for text use DominoEx mapping)
+12 primary characters: "0123456789,."; (for text use DominoEx mapping)
 
-8x8 secondary chars, ASCII 32-95 
+4x16 secondary chars, ASCII 32-95
  .. lowercase mapped onto uppercase, for ASCII 96 to 127 subtract 32
 
-Upto 8 extended chars, mapped onto ASCII "01234567", but only CR and LF are used
+Upto 12 extended chars, mapped onto ASCII "0123456789,.", but only CR and LF are used
  .. for ASCII 10 & 13 add (48 - 10), discard all other chars below " "( ASCII 32).
 
 
